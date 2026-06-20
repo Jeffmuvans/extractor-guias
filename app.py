@@ -110,6 +110,20 @@ if archivo:
                 st.error("El archivo no tiene suficientes columnas (se requiere hasta la columna X).")
                 st.stop()
 
+            # Extraer encabezado desde fila 2 (índice 1)
+            def celda(col):
+                try:
+                    v = df.iloc[1, col]
+                    return str(v).strip() if pd.notna(v) else ""
+                except:
+                    return ""
+
+            fecha        = celda(2)   # C2
+            hora_inicio  = celda(3)   # D2
+            hora_fin     = celda(4)   # E2
+            doc_interm   = celda(7)   # H2
+            nit          = celda(9)   # J2
+
             resultados = []
             errores = []
 
@@ -132,7 +146,13 @@ if archivo:
         col2.metric("⚠️ Sin código 1314", len(errores))
 
         if resultados:
-            contenido = "\n".join(resultados)
+            encabezado = "FECHA=" + fecha + "\n" + \
+                         "HORA_INICIO=" + hora_inicio + "\n" + \
+                         "HORA_FIN=" + hora_fin + "\n" + \
+                         "DOC_INTERMEDIARIO=" + doc_interm + "\n" + \
+                         "NIT=" + nit + "\n" + \
+                         "-----------------------------"
+            contenido = encabezado + "\n" + "\n".join(resultados)
             nombre_txt = archivo.name.rsplit(".", 1)[0] + "_guias.txt"
 
             st.download_button(

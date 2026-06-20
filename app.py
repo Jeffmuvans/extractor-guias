@@ -15,43 +15,72 @@ st.markdown("Sube tu archivo Excel con la hoja **DATOS** y descarga el TXT con l
 # Lógica de búsqueda
 # ---------------------------------------------------------------------------
 
+import re
+
 def val(df, fila, col):
     if fila < 0 or fila >= len(df):
         return ""
     v = df.iloc[fila, col]
     return str(v).strip() if pd.notna(v) else ""
 
+def extraer_1314_de_texto(texto):
+    """Extrae el primer código 1314XXXXXXXX que aparezca en un texto."""
+    match = re.search(r'1314\d+', texto)
+    return match.group(0) if match else None
+
+def extraer_descripcion(texto):
+    """Extrae solo el texto descriptivo desde la primera letra, sin números ni símbolos iniciales."""
+    match = re.search(r'(?<![A-Z0-9])([A-ZÁÉÍÓÚÑA-záéíóúñ][^0-9/]{2,})', texto)
+    return match.group(1).strip() if match else texto.strip()
+
+def es_cambio_de_grupo(v):
+    """Detecta si un valor en columna C representa una nueva Guia Master
+    (tiene contenido y NO empieza por 1314)."""
+    return v != "" and not v.startswith("1314")
+
 def buscar_1314(df, fila_idx, col_c, col_x):
-    c_actual = val(df, fila_idx, col_c)
+    """
+    Jerarquía de búsqueda:
+    1. Busca hacia ABAJO en col C hasta encontrar 1314 o celda vacía.
+    2. Si no, busca hacia ARRIBA en col C hasta encontrar 1314 o cambio de grupo.
+    3. Si no, extrae 1314 con regex de col X en las filas del mismo grupo.
+    """
 
-    # CASO 1: C vacía → buscar hacia arriba
-    if c_actual == "":
-        for i in range(fila_idx - 1, -1, -1):
-            v = val(df, i, col_c)
-            if v.startswith("1314"):
-                return v
-        return None
-
-    # CASO 2: C ya tiene 1314
-    if c_actual.startswith("1314"):
-        return c_actual
-
-    # CASO 3: C tiene otro valor → buscar hacia abajo alternando C y X
-    fila_busqueda = fila_idx
-    while fila_busqueda < len(df):
-        x_val = val(df, fila_busqueda, col_x)
-        if x_val.startswith("1314"):
-            return x_val
-
-        fila_busqueda += 1
-        if fila_busqueda >= len(df):
+    # --- Determinar los límites del grupo ---
+    # Límite superior: fila de la Master más cercana hacia arriba (inclusive)
+    limite_arriba = 0
+    for i in range(fila_idx - 1, -1, -1):
+        v = val(df, i, col_c)
+        if es_cambio_de_grupo(v):
+            limite_arriba = i
             break
 
-        c_sig = val(df, fila_busqueda, col_c)
-        if c_sig == "":
+    # Límite inferior: próxima celda vacía o cambio de grupo hacia abajo
+    limite_abajo = len(df) - 1
+    for i in range(fila_idx + 1, len(df)):
+        v = val(df, i, col_c)
+        if v == "" or es_cambio_de_grupo(v):
+            limite_abajo = i - 1
             break
-        if c_sig.startswith("1314"):
-            return c_sig
+
+    # PASO 1: buscar hacia abajo en col C dentro del grupo
+    for i in range(fila_idx, limite_abajo + 1):
+        v = val(df, i, col_c)
+        if v.startswith("1314"):
+            return v
+
+    # PASO 2: buscar hacia arriba en col C dentro del grupo
+    for i in range(fila_idx - 1, limite_arriba - 1, -1):
+        v = val(df, i, col_c)
+        if v.startswith("1314"):
+            return v
+
+    # PASO 3: buscar con regex en col X de todas las filas del grupo
+    for i in range(limite_arriba, limite_abajo + 1):
+        x = val(df, i, col_x)
+        codigo = extraer_1314_de_texto(x)
+        if codigo:
+            return codigo
 
     return None
 
@@ -87,7 +116,7 @@ if archivo:
                 if h.upper() == "X":
                     guia   = val(df, i, COL_D)
                     val_l  = val(df, i, COL_L)
-                    val_x  = val(df, i, COL_X)
+                    val_x  = extraer_descripcion(val(df, i, COL_X))
                     codigo = buscar_1314(df, i, COL_C, COL_X)
 
                     if codigo:

@@ -63,14 +63,20 @@ def buscar_1314(df, fila_idx, col_c, col_x):
         x = extraer_1314_de_texto(val(df, fila_idx, col_x))
         if x:
             return x
-        # 3b. Col C de la fila de abajo
+        # 3b. Col C y X de la fila de abajo
         c_abajo = val(df, fila_idx + 1, col_c)
         if c_abajo.startswith("1314"):
             return c_abajo
-        # 3c. Col X de la fila de abajo
         x_abajo = extraer_1314_de_texto(val(df, fila_idx + 1, col_x))
         if x_abajo:
             return x_abajo
+        # 3c. Col C y X de la fila de arriba
+        c_arriba = val(df, fila_idx - 1, col_c)
+        if c_arriba.startswith("1314"):
+            return c_arriba
+        x_arriba = extraer_1314_de_texto(val(df, fila_idx - 1, col_x))
+        if x_arriba:
+            return x_arriba
         return None
 
     # CASO 4: otro valor → X misma fila, luego C y X de las 2 filas siguientes

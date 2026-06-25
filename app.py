@@ -27,7 +27,10 @@ def extraer_1314_de_texto(texto):
     return match.group(0) if match else None
 
 def extraer_descripcion(texto):
-    """Extrae solo el texto descriptivo desde la primera letra, sin números ni símbolos iniciales."""
+    """Extrae texto descriptivo. Si contiene URL, la retorna completa.
+    Si no, extrae desde la primera letra ignorando números y símbolos iniciales."""
+    if re.search(r'https?://', texto):
+        return texto.strip()
     match = re.search(r'(?<![A-Z0-9])([A-ZÁÉÍÓÚÑA-záéíóúñ][^0-9/]{2,})', texto)
     return match.group(1).strip() if match else texto.strip()
 

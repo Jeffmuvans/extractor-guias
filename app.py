@@ -27,12 +27,14 @@ def extraer_1314_de_texto(texto):
     return match.group(0) if match else None
 
 def extraer_descripcion(texto):
-    """Extrae texto descriptivo. Si contiene URL, la retorna completa.
-    Si no, extrae desde la primera letra ignorando números y símbolos iniciales."""
+    """Extrae texto descriptivo eliminando códigos largos y separadores.
+    Si contiene URL, la retorna completa."""
     if re.search(r'https?://', texto):
         return texto.strip()
-    match = re.search(r'(?<![A-Z0-9])([A-ZÁÉÍÓÚÑA-záéíóúñ][^0-9/]{2,})', texto)
-    return match.group(1).strip() if match else texto.strip()
+    limpio = re.sub(r'\b\d{7,}\b', '', texto)      # elimina codigos de 7+ digitos
+    limpio = re.sub(r'\s*[-/]+\s*', ' ', limpio)    # elimina separadores - y /
+    limpio = limpio.strip()
+    return limpio if limpio else texto.strip()
 
 def buscar_1314(df, fila_idx, col_c, col_x):
     """
